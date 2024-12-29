@@ -1,11 +1,18 @@
+import * as Location from "expo-location";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
 import { Alert, View } from "react-native";
+import MapView, { Marker } from "react-native-maps";
 
 import { Categories } from "@/components/categories";
 import { PlaceProps } from "@/components/place";
 import { Places } from "@/components/places";
 import { api } from "@/services/api";
+
+const currentLocation = {
+  latitude: -23.561187293883442,
+  longitude: -46.656451388116494,
+};
 
 export default function Home() {
   const [categories, setCategories] = useState<Categories>([]);
@@ -40,12 +47,26 @@ export default function Home() {
     }
   }
 
+  async function getCurrentLocation() {
+    try {
+      const { granted } = await Location.requestForegroundPermissionsAsync();
+
+      if (granted) {
+        const location = await Location.getCurrentPositionAsync();
+      }
+    } catch (error) {
+      console.log(error);
+      Alert.alert("Localização", "Não foi possível obter a localização");
+    }
+  }
+
   useEffect(() => {
     fetchCategories();
   }, []);
 
   useEffect(() => {
     fetchPlaces();
+    getCurrentLocation();
   }, [category]);
 
   return (
@@ -55,6 +76,39 @@ export default function Home() {
         selected={category}
         onSelect={setCategory}
       />
+
+      <MapView
+        style={{ flex: 1 }}
+        initialRegion={{
+          latitude: currentLocation.latitude,
+          longitude: currentLocation.longitude,
+          latitudeDelta: 0.01,
+          longitudeDelta: 0.01,
+        }}
+      >
+        <Marker
+          identifier="current"
+          coordinate={{
+            latitude: currentLocation.latitude,
+            longitude: currentLocation.longitude,
+          }}
+          image={require("@/assets/location.png")}
+        />
+
+        {places.map((place) => (
+          <Marker
+            key={place.id}
+            identifier={place.id}
+            coordinate={{
+              latitude: place.latitude,
+              longitude: place.longitude,
+            }}
+            title={place.name}
+            description={place.address}
+            image={require("@/assets/pin.png")}
+          />
+        ))}
+      </MapView>
 
       <Places places={places} />
     </View>
